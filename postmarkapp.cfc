@@ -1,26 +1,44 @@
-﻿<cfcomponent hint="Postmark App" output="false" cache="true" accessors="true">
+﻿<!-----------------------------------------------------------------------
+
+Copyright 2010, LunarFly / Jeremy R DeYoung.
+For support, visit http://www.lunarfly.com/lft/plugin/postmarkapp
+
+Postmark App Rest Wrapper
+
+Version 1.0.3 - Bug Fixes to work with non-coldbox frameworks
+Version 1.0.2 - Bug Fixes
+Version 1.0.1 - Support for getBounces() & getDeliveryStats()
+Version 1.0.0 - Released: December 3, 2010
+
+This plugin can be modified to work with non-coldbox frameworks.
+Simply remove the 'extends' attribute of <cfcomponent> and
+delete setPluginName() thru setPluginAuthorURL() in init() function.
+
+----------------------------------------------------------------------->
+<cfcomponent hint="Postmark App" output="false" extends="coldbox.system.Plugin" cache="true" accessors="true">
 
 	<!--- API Setup --->
-	<cfproperty name="APIKey" default="" type="string" hint="the Postmark App credentials" required="true">
+	<cfproperty name="APIKey" default="" type="string" hint="the Postmark App credentials" required="false">
 	<!--- Addressing --->
-	<cfproperty name="From" default="" type="string" hint="the from email address" required="true">
-	<cfproperty name="To" default="" type="string" hint="the to email addresses" required="true">
-	<cfproperty name="CC" default="" type="string" hint="a list of cc email addresses" required="true">
-	<cfproperty name="BCC" default="" type="string" hint="a list of bcc from email addresses" required="true">
-	<cfproperty name="ReplyTo" default="" type="string" hint="the Reply To Email Address" required="true">
+	<cfproperty name="From" default="" type="string" hint="the from email address" required="false">
+	<cfproperty name="To" default="" type="string" hint="the to email addresses" required="false">
+	<cfproperty name="CC" default="" type="string" hint="a list of cc email addresses" required="false">
+	<cfproperty name="BCC" default="" type="string" hint="a list of bcc from email addresses" required="false">
+	<cfproperty name="ReplyTo" default="" type="string" hint="the Reply To Email Address" required="false">
 	<!--- Message Setup --->
-	<cfproperty name="Subject" default="" type="string" hint="the email subject line" required="true">
-	<cfproperty name="HTMLBody" default="" type="string" hint="HTML Message Body" required="true">
-	<cfproperty name="TestBody" default="" type="string" hint="Plain Text Message Body" required="true">
+	<cfproperty name="Subject" default="" type="string" hint="the email subject line" required="false">
+	<cfproperty name="HTMLBody" default="" type="string" hint="HTML Message Body" required="false">
+	<cfproperty name="TextBody" default="" type="string" hint="Plain Text Message Body" required="false">
 
 	<cffunction name="init" access="public" returnType="postmarkapp" output="false" hint="Constructor">
 		<cfscript>
 			// The lines below are only required if you use ColdBox
 			setPluginName("Postmark App");
-			setPluginVersion("1.0.1");
+			setPluginVersion("1.0.3");
 			setPluginDescription("A REST wrapper to the Postmark App service");
 			setPluginAuthor("Jeremy R DeYoung");
 			setPluginAuthorURL("http://www.lunarfly.com/lft/plugins/postmarkapp");
+
 			return this;
 		</cfscript>
 	</cffunction>
@@ -28,37 +46,38 @@
     <cffunction name="send" output="false" access="public" returntype="any">
 		<cfscript>
 			var jsonStruct = StructNew();
-			if(structKeyExists(instance,"to")){
+
+			if(len(this.getTO())){
 				jsonStruct.to = getTo();
 			}
 			else
 			{
 				$throw(message="TO is a Required Field",type="postmarkapp.requiredField");
 			}
-			if(structKeyExists(instance,"from")){
+			if(len(this.getFrom())){
 				jsonStruct.from = getFrom();
 			}
 			else
 			{
 				$throw(message="From is a Required Field",type="postmarkapp.requiredField");
 			}
-			if(structKeyExists(instance,"cc")){
+			if(Len(this.getCC())){
 				jsonStruct.cc = getCC();
 			}
-			if(structKeyExists(instance,"bcc")){
+			if(len(this.getBCC())){
 				jsonStruct.bcc = getBCC();
 			}
-			if(structKeyExists(instance,"subject")){
+			if(len(this.getSubject())){
 				jsonStruct.subject = getSubject();
 			}
 			else
 			{
 				$throw(message="Subject is a Required Field",type="postmarkapp.requiredField");
 			}
-			if(structKeyExists(instance,"HtmlBody")){
+			if(len(this.getHTMLBody())){
 				jsonStruct.HtmlBody = getHTMLBody();
 			}
-			if(structKeyExists(instance,"TextBody")){
+			if(len(this.getTextBody())){
 				jsonStruct.TextBody = getTextBody();
 			}
 
@@ -120,7 +139,7 @@
 
 			if(structKeyExists(arguments,'sendJSON'))
 			{
-				httpService.addParam(type="body",value=SerializeJSON(arguments.json).toString());
+				httpService.addParam(type="body",value=toString(SerializeJSON(arguments.sendJSON)));
 			}
 			httpService.addParam(type="header",name="X-Postmark-Server-Token",value=this.getAPIKey());
 			httpService.addParam(type="header",name="Accept",value="application/json");
@@ -141,8 +160,9 @@
 			{
 			    httpService.setUrl(arguments.httpURL);
 			}
-			var result = httpService.send().getPrefix();
 
+
+			var result = httpService.send().getPrefix();
 			var resultStruct      = structNew();
 			resultStruct.code     = ListFirst(result.statuscode," ");
 			resultStruct.status   = RemoveChars(result.statuscode,1,4);
