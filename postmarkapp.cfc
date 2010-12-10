@@ -137,9 +137,17 @@ delete setPluginName() thru setPluginAuthorURL() in init() function.
 			var argumentsList = StructKeyList(arguments);
 			var queryString = "";
 
+			if(len(toString(SerializeJSON(arguments.sendJSON))) eq 0)
+			{
+				$throw('Invalid Body Data');
+			}
 			if(structKeyExists(arguments,'sendJSON'))
 			{
 				httpService.addParam(type="body",value=toString(SerializeJSON(arguments.sendJSON)));
+			}
+			if(len(this.getAPIKey()) eq 0)
+			{
+				$throw('Invalid API Key');
 			}
 			httpService.addParam(type="header",name="X-Postmark-Server-Token",value=this.getAPIKey());
 			httpService.addParam(type="header",name="Accept",value="application/json");
@@ -152,12 +160,20 @@ delete setPluginName() thru setPluginAuthorURL() in init() function.
 				var queryList = StructKeyList(arguments.httpQueryString);
 				for(var i=1;i <= ListLen(queryList);i++)
 				{
+					if(len(arguments.httpQueryString[listGetAt(queryList,i)]) eq 0)
+					{
+						$throw('Invalid value for Param #lcase(listGetAt(queryList,i))#');
+					}
 					queryString = queryString & "#lcase(listGetAt(queryList,i))#=" & arguments.httpQueryString[listGetAt(queryList,i)] & "&";
 				}
 			    httpService.setUrl(arguments.httpURL & "?" & queryString);
 			}
 			else
 			{
+				if(len(arguments.httpURL) eq 0)
+				{
+					$throw('Invalud HTTP URL');
+				}
 			    httpService.setUrl(arguments.httpURL);
 			}
 
